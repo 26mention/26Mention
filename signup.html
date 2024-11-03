@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <style>
+        .message {
+            color: red;
+            margin: 10px 0;
+        }
+        .log-int{
+            margin-left: -5px;
+            width: 92%;
+            border-radius: 8px;
+            padding-left: 10px;
+        }
+        input[type="checkbox" i] {
+            margin-top: 20px;
+        }
+        .log-btn{
+            width: 98%;
+            margin-left: 0px;
+        }
+        #detailsForm {
+            display: none;
+        }
+        #address{
+        width: 92%;
+    border-radius: 8px;
+    height: 5pc;
+        }
+        /* Optional styling for the form container */
+        #signupForm, #otpForm, #detailsForm {
+            max-width: 400px;
+            margin: auto;
+            margin-top: 13pc;
+            margin-bottom: 5%;
+    width: 19pc;
+    padding: 20px;
+    border: 1px solid #ccc;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;        
+}
+
+    </style>
+</head>
+<body>
+
+<div id="signupForm">
+    <h2>Signup</h2>
+    <form>
+        <input type="email" id="email" placeholder="Email" required class="log-int"><br>
+        <input type="text" id="username" placeholder="Username" required class="log-int"><br>
+        <input type="password" id="password" placeholder="Password" required class="log-int">
+        <input type="checkbox" onclick="showPassword()" class="show-pass"> Show Password<br>
+        <button type="button" onclick="validateEmail()" class="log-btn">Get OTP</button>
+    </form>
+    <div id="message" class="message"></div>
+</div>
+
+<div id="otpForm" style="display:none;">
+    <h2>Enter OTP</h2>
+    <form>
+        <input type="text" id="otp" placeholder="Enter OTP" required class="log-int"><br>
+        <button type="button" onclick="verifyOTP()" class="log-btn">Next Page</button>
+    </form>
+    <div id="otpMessage" class="message"></div>
+</div>
+
+<div id="detailsForm">
+    <h2>Additional Details</h2>
+    <form>
+        <input type="text" id="name" placeholder="Name" required class="log-int"><br>
+        <input type="text" id="mobile" placeholder="Mobile" required class="log-int"><br>
+        <input type="text" id="pincode" placeholder="Pin code" required class="log-int"><br>
+        <input type="text" id="state" placeholder="State" required readonly class="log-int"><br>
+        <input type="text" id="city" placeholder="City" required readonly class="log-int"><br>
+        <textarea id="address" placeholder="Address" required class="log-int"></textarea><br>
+        <button type="button" onclick="submitDetails()" class="log-btn">Submit</button>
+    </form>
+    <div id="detailsMessage" class="message"></div>
+</div>
+
+<script>
+const pincodeMapping = {
+    "827010": { state: "Jharkhand", city: "Bokaro" }
+};
+
+function displayMessage(elementId, message) {
+    $("#" + elementId).text(message).show();
+}
+
+function clearMessage(elementId) {
+    $("#" + elementId).hide();
+}
+
+function validateEmail() {
+    var email = $("#email").val();
+    if (!isValidEmail(email)) {
+        displayMessage("message", "Please enter a valid email ending with @gmail.com or @yahoo.com");
+        return;
+    }
+    var username = $("#username").val();
+    var password = $("#password").val();
+
+    // Store password in local storage temporarily
+    localStorage.setItem('password', password);
+
+    requestOTP();
+}
+
+function isValidEmail(email) {
+    var emailPattern = /^[a-zA-Z0-9._-]+@(gmail|yahoo)\.com$/;
+    return emailPattern.test(email);
+}
+
+function showPassword() {
+    var passwordField = document.getElementById("password");
+    passwordField.type = (passwordField.type === "password") ? "text" : "password";
+}
+
+function requestOTP() {
+    var email = $("#email").val();
+    var username = $("#username").val();
+
+    fetch('https://script.google.com/macros/s/AKfycbwJPzihj-_BH97WJKf3Yvb494A3B9n3o1njXGyi6p0JChWaUC3YZlaeWH-qUjksyUxhaA/exec?requestOTP=true&email='+email+'&username='+username)
+        .then(response => response.text())
+        .then(data => {
+            if (data === 'Email already exists' || data === 'Username already exists') {
+                displayMessage("message", data);
+            } else {
+                sendOTP(email);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function sendOTP(email) {
+    fetch('https://script.google.com/macros/s/AKfycbwJPzihj-_BH97WJKf3Yvb494A3B9n3o1njXGyi6p0JChWaUC3YZlaeWH-qUjksyUxhaA/exec?requestOTP=true&email='+email)
+        .then(response => response.text())
+        .then(data => {
+            if (data === 'OTP sent to Google Sheets') {
+                $("#otpForm").show();
+                $("#signupForm").hide(); // Hide signup form when OTP form is displayed
+                clearMessage("message");
+            } else {
+                displayMessage("message", data);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function verifyOTP() {
+    var otpEntered = $("#otp").val();
+    var email = $("#email").val();
+
+    fetch('https://script.google.com/macros/s/AKfycbwJPzihj-_BH97WJKf3Yvb494A3B9n3o1njXGyi6p0JChWaUC3YZlaeWH-qUjksyUxhaA/exec?verifyOTP=true&email='+email+'&otp='+otpEntered)
+        .then(response => response.text())
+        .then(data => {
+            if (data === 'OTP verified') {
+                localStorage.setItem('email', email);
+                localStorage.setItem('username', $("#username").val());
+                $("#otpForm").hide(); // Hide OTP form
+                $("#detailsForm").show(); // Show details form
+            } else {
+                displayMessage("otpMessage", data);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function submitDetails() {
+    var email = localStorage.getItem('email');
+    var username = localStorage.getItem('username');
+    var password = localStorage.getItem('password');
+    var name = $("#name").val();
+    var mobile = $("#mobile").val();
+    var pincode = $("#pincode").val();
+    var state = $("#state").val();
+    var city = $("#city").val();
+    var address = $("#address").val();
+
+    if (!name || !mobile || !pincode || !state || !city || !address) {
+        displayMessage("detailsMessage", "All fields are required");
+        return;
+    }
+
+    fetch(`https://script.google.com/macros/s/AKfycbwJPzihj-_BH97WJKf3Yvb494A3B9n3o1njXGyi6p0JChWaUC3YZlaeWH-qUjksyUxhaA/exec?email=${email}&username=${username}&password=${password}&name=${name}&mobile=${mobile}&pincode=${pincode}&state=${state}&city=${city}&address=${address}`)
+        .then(response => response.text())
+        .then(data => {
+            if (data === 'Signup successfully') {
+                displayMessage("detailsMessage", "Signup successfully");
+                setTimeout(() => location.reload(), 4000);
+            } else {
+                displayMessage("detailsMessage", data);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+$("#pincode").on("input", function() {
+    var pincode = $(this).val();
+    if (pincodeMapping[pincode]) {
+        $("#state").val(pincodeMapping[pincode].state);
+        $("#city").val(pincodeMapping[pincode].city);
+    } else {
+        $("#state").val("");
+        $("#city").val("");
+        if (pincode.length === 6) {
+            alert("Pincode not found");
+        }
+    }
+});
+</script>
+
+</body>
+</html>
